@@ -81,8 +81,11 @@ extension IntegrationExample: DropInComponentDelegate {
     }
 
     internal func didCancel(component: PaymentComponent, from dropInComponent: DropInComponent) {
-        // Handle the event when the user closes a PresentableComponent.
         print("User did close: \(component)")
+    }
+
+    func didStart(component: PaymentComponent, from dropInComponent: DropInComponent) {
+        print("User did start: \(component)")
     }
 
 }

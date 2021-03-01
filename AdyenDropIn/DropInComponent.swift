@@ -207,6 +207,7 @@ extension DropInComponent: PaymentComponentDelegate {
     /// :nodoc:
     public func didSubmit(_ data: PaymentComponentData, from component: PaymentComponent) {
         paymentInProgress = true
+        delegate?.didStart(component: component, from: self)
         delegate?.didSubmit(data, from: self)
     }
     
