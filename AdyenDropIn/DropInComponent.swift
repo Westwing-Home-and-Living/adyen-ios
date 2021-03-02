@@ -60,15 +60,14 @@ public final class DropInComponent: NSObject,
     }
     
     /// :nodoc:
-    public func stopLoading(withSuccess success: Bool, completion: (() -> Void)?) {
-        paymentInProgress = false
+    public func stopLoading(completion: (() -> Void)?) {
         let rootComponent = self.rootComponent
         if let topComponent = selectedPaymentComponent as? LoadingComponent {
-            topComponent.stopLoading(withSuccess: success) {
-                rootComponent.stopLoading(withSuccess: success, completion: completion)
+            topComponent.stopLoading {
+                rootComponent.stopLoading(completion: completion)
             }
         } else {
-            rootComponent.stopLoading(withSuccess: success, completion: completion)
+            rootComponent.stopLoading(completion: completion)
         }
     }
 
@@ -178,15 +177,19 @@ public final class DropInComponent: NSObject,
             self.delegate?.didFail(with: ComponentError.cancelled, from: self)
         } else {
             navigationController.popViewController(animated: true)
-            stopLoading(withSuccess: true, completion: nil)
             userDidCancel(component)
         }
     }
 
     private func userDidCancel(_ component: Component) {
+        stopLoading(completion: nil)
         (component as? Cancellable)?.didCancel()
-        guard let component = (component as? PaymentComponent) ?? selectedPaymentComponent else { return }
-        delegate?.didCancel(component: component, from: self)
+
+        if let component = (component as? PaymentComponent) ?? selectedPaymentComponent, paymentInProgress {
+            delegate?.didCancel(component: component, from: self)
+        }
+
+        paymentInProgress = false
     }
 }
 
@@ -213,9 +216,7 @@ extension DropInComponent: PaymentComponentDelegate {
     
     /// :nodoc:
     public func didFail(with error: Error, from component: PaymentComponent) {
-        paymentInProgress = false
         if case ComponentError.cancelled = error {
-            stopLoading(withSuccess: false, completion: nil)
             userDidCancel(component)
         } else {
             delegate?.didFail(with: error, from: self)
@@ -229,7 +230,7 @@ extension DropInComponent: ActionComponentDelegate {
     
     /// :nodoc:
     public func didOpenExternalApplication(_ component: ActionComponent) {
-        stopLoading(withSuccess: true, completion: nil)
+        stopLoading(completion: nil)
     }
 
     /// :nodoc:
@@ -240,8 +241,6 @@ extension DropInComponent: ActionComponentDelegate {
     /// :nodoc:
     public func didFail(with error: Error, from component: ActionComponent) {
         if case ComponentError.cancelled = error {
-            paymentInProgress = false
-            stopLoading(withSuccess: false, completion: nil)
             userDidCancel(component)
         } else {
             delegate?.didFail(with: error, from: self)
@@ -279,8 +278,7 @@ extension DropInComponent: PreselectedPaymentMethodComponentDelegate {
 }
 
 extension DropInComponent: PresentationDelegate {
-    public func present(component: PresentableComponent, disableCloseButton: Bool) {
-        paymentInProgress = disableCloseButton
+    public func present(component: PresentableComponent) {
         navigationController.present(asModal: component)
     }
 }
